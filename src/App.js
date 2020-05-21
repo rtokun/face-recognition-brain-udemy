@@ -1,26 +1,96 @@
-import React from 'react';
-import logo from './logo.svg';
+import React, {Component} from 'react';
 import './App.css';
+import Navigation from "./components/navigation/navigation";
+import 'tachyons';
+import Logo from "./components/logo/logo";
+import ImageLinkForm from "./components/imagelinkform/imagelinkform";
+import Rank from "./components/rank/rank";
+import Particles from "react-particles-js";
+import Clarifai from 'clarifai';
+import FaceRecognition from "./components/facerecognition/facerecognition";
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+const clarifyApp = new Clarifai.App({
+    apiKey: '25a758b409cb4a81a3232078fb9a3bce'
+});
+
+const particlesParams = {
+    particles: {
+        number: {
+            value: 50,
+            density: {
+                enable: true,
+                value_area: 800
+            }
+        }
+    }
+};
+
+class App extends Component {
+
+    constructor() {
+        super();
+        this.state = {
+            input: '',
+            imageUrl: '',
+            box: {}
+        }
+    }
+
+    calculateFaceLocation = (data) => {
+        const clarifaiFace = data.outputs[0].data.regions[0].region_info.bounding_box
+        const image = document.getElementById('inputImage');
+        const width = Number(image.width);
+        const height = Number(image.height);
+
+        return {
+            leftCol: clarifaiFace.left_col * width,
+            topRow: clarifaiFace.top_row * height,
+            rightCol: width - (clarifaiFace.right_col * width),
+            bottomRow: height - (clarifaiFace.bottom_row * height)
+        }
+    };
+
+    displayFaceBox = (box) => {
+        this.setState({box: box});
+        console.log('XXX', box);
+    };
+
+    onInputChange = (event) => {
+        this.setState({input: event.target.value});
+    };
+
+    onSubmit = async () => {
+        this.setState({imageUrl: this.state.input});
+        try {
+            const result = await clarifyApp.models
+                .predict(
+                    Clarifai.FACE_DETECT_MODEL,
+                    this.state.input
+                );
+            const box = this.calculateFaceLocation(result);
+            this.displayFaceBox(box);
+        } catch (e) {
+            console.log(e);
+        }
+    };
+
+    render() {
+        return (
+            <div className="App">
+                <Particles className='particles'
+                           params={particlesParams}/>
+                <Navigation/>
+                <Logo/>
+                <Rank/>
+                <ImageLinkForm onInputChange={this.onInputChange} onSubmit={this.onSubmit}/>
+                <FaceRecognition
+                    imageUrl={this.state.imageUrl}
+                    box={this.state.box}
+                />
+            </div>
+        );
+    }
+
 }
 
 export default App;
