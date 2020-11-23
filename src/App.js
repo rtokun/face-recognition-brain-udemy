@@ -37,9 +37,28 @@ class App extends Component {
             imageUrl: '',
             box: {},
             route: SIGN_IN,
-            isSignedIn: false
+            isSignedIn: false,
+            user: {
+                id: '',
+                name: 'qqq',
+                email: '',
+                entries: 0,
+                joined: new Date()
+            }
         }
     }
+
+    loadUser = (user) => {
+        this.setState({
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                entries: user.entries,
+                joined: user.joined
+            }
+        })
+    };
 
     onRouteChange = (route) => {
         switch (route) {
@@ -85,6 +104,15 @@ class App extends Component {
                     this.state.input
                 );
             const box = this.calculateFaceLocation(result);
+
+            await fetch('http://localhost:4000/image', {
+                method: 'put',
+                headers: {
+                    'Content-type': 'application/json'
+                },
+                body: JSON.stringify({id: this.state.user.id})
+            });
+
             this.displayFaceBox(box);
         } catch (e) {
             console.log(e);
@@ -92,23 +120,24 @@ class App extends Component {
     };
 
     render() {
-       const { isSignedIn, imageUrl, route, box } = this.state;
+        const {isSignedIn, imageUrl, route, box} = this.state;
+        const {name, entries} = this.state.user;
         return (
             <div className="App">
                 <Particles className='particles'
                            params={particlesParams}/>
                 <Navigation onRouteChange={this.onRouteChange} isSignedIn={isSignedIn}/>
-                {this.getViewForState(route, imageUrl, box)}
+                {this.getViewForState(route, imageUrl, box, name, entries)}
             </div>
         );
     }
 
-    getViewForState(route, imageUrl, box) {
+    getViewForState(route, imageUrl, box, name, entries) {
         switch (route) {
             case HOME:
                 return (<div>
                     <Logo/>
-                    <Rank/>
+                    <Rank entries={entries} name={name}/>
                     <ImageLinkForm onInputChange={this.onInputChange} onSubmit={this.onSubmit}/>
                     <FaceRecognition
                         imageUrl={imageUrl}
@@ -116,10 +145,10 @@ class App extends Component {
                     />
                 </div>);
             case REGISTER:
-                return (<Register onRouteChange={this.onRouteChange}/>);
+                return (<Register onRouteChange={this.onRouteChange} loadUser={this.loadUser}/>);
             case SIGN_IN:
             case SIGN_OUT:
-                return (<SignIn onRouteChange={this.onRouteChange}/>);
+                return (<SignIn onRouteChange={this.onRouteChange} loadUser={this.loadUser}/>);
         }
     }
 }
